@@ -7,11 +7,14 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`
-	GRPC     GRPCConfig     `mapstructure:"grpc"`
-	Database DatabaseConfig `mapstructure:"database"`
-	JWT      JWTConfig      `mapstructure:"jwt"`
-	Logger   LoggerConfig   `mapstructure:"logger"`
+	Server      ServerConfig   `mapstructure:"server"`
+	GRPC        GRPCConfig     `mapstructure:"grpc"`
+	AuthService GRPCServiceConfig `mapstructure:"auth_service"`
+	TodoService GRPCServiceConfig `mapstructure:"todo_service"`
+	Database    DatabaseConfig `mapstructure:"database"`
+	JWT         JWTConfig      `mapstructure:"jwt"`
+	Logger      LoggerConfig   `mapstructure:"logger"`
+	Environment string         `mapstructure:"environment"`
 }
 
 type ServerConfig struct {
@@ -49,17 +52,28 @@ type LoggerConfig struct {
 	Encoding string `mapstructure:"encoding"`
 }
 
-func LoadConfig(path string) (*Config, error) {
-	viper.SetConfigFile(path)
+func LoadConfig(path ...string) (*Config, error) {
+	// If path is provided, use it; otherwise use default
+	configPath := "configs/app.yaml"
+	if len(path) > 0 && path[0] != "" {
+		configPath = path[0]
+	}
+
+	viper.SetConfigFile(configPath)
 	viper.SetConfigType("yaml")
 
 	// Set default values
+	viper.SetDefault("environment", "development")
 	viper.SetDefault("server.port", "8080")
 	viper.SetDefault("server.mode", "debug")
 	viper.SetDefault("grpc.auth_service.port", "50051")
 	viper.SetDefault("grpc.auth_service.host", "localhost")
 	viper.SetDefault("grpc.todo_service.port", "50052")
 	viper.SetDefault("grpc.todo_service.host", "localhost")
+	viper.SetDefault("auth_service.port", "50051")
+	viper.SetDefault("auth_service.host", "localhost")
+	viper.SetDefault("todo_service.port", "50052")
+	viper.SetDefault("todo_service.host", "localhost")
 	viper.SetDefault("database.mongodb.uri", "mongodb://localhost:27017")
 	viper.SetDefault("database.mongodb.database", "todoapp")
 	viper.SetDefault("database.mongodb.timeout", 10)
