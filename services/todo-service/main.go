@@ -72,11 +72,12 @@ func main() {
 		}
 	}()
 
-	// Create local gRPC client for HTTP handlers
-	todoGrpcClient, err := createLocalTodoClient(cfg.GRPC.TodoService.Host, cfg.GRPC.TodoService.Port)
+	// Create local gRPC client for HTTP handlers with retry logic
+	todoGrpcClient, conn, err := createLocalTodoClient(cfg.GRPC.TodoService.Host, cfg.GRPC.TodoService.Port)
 	if err != nil {
 		logger.Log.Fatal("Failed to create local todo gRPC client", zap.Error(err))
 	}
+	defer conn.Close()
 
 	// Setup and start HTTP server
 	router := httpServer.SetupRouter(todoGrpcClient, authClient)
@@ -87,15 +88,28 @@ func main() {
 	}
 }
 
-func createLocalTodoClient(host, port string) (pb.TodoServiceClient, error) {
-	// Wait a bit for gRPC server to start
-	time.Sleep(1 * time.Second)
-
+func createLocalTodoClient(host, port string) (pb.TodoServiceClient, *grpc.ClientConn, error) {
 	address := fmt.Sprintf("%s:%s", host, port)
-	conn, err := grpc.Dial(address, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to local todo service: %w", err)
+	
+	// Retry logic with exponential backoff
+	maxRetries := 5
+	baseDelay := 200 * time.Millisecond
+	
+	var conn *grpc.ClientConn
+	var err error
+	
+	for i := 0; i < maxRetries; i++ {
+		conn, err = grpc.Dial(address, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err == nil {
+			return pb.NewTodoServiceClient(conn), conn, nil
+		}
+		
+		if i < maxRetries-1 {
+			delay := baseDelay * time.Duration(1<<uint(i))
+			logger.Log.Warn(fmt.Sprintf("Failed to connect to local todo service, retrying in %v", delay), zap.Error(err))
+			time.Sleep(delay)
+		}
 	}
-
-	return pb.NewTodoServiceClient(conn), nil
+	
+	return nil, nil, fmt.Errorf("failed to connect to local todo service after %d retries: %w", maxRetries, err)
 }
