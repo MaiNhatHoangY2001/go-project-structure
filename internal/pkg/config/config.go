@@ -3,18 +3,19 @@ package config
 import (
 	"log"
 
+	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 )
 
 type Config struct {
-	Server      ServerConfig   `mapstructure:"server"`
-	GRPC        GRPCConfig     `mapstructure:"grpc"`
+	Server      ServerConfig      `mapstructure:"server"`
+	GRPC        GRPCConfig        `mapstructure:"grpc"`
 	AuthService GRPCServiceConfig `mapstructure:"auth_service"`
 	TodoService GRPCServiceConfig `mapstructure:"todo_service"`
-	Database    DatabaseConfig `mapstructure:"database"`
-	JWT         JWTConfig      `mapstructure:"jwt"`
-	Logger      LoggerConfig   `mapstructure:"logger"`
-	Environment string         `mapstructure:"environment"`
+	Database    DatabaseConfig    `mapstructure:"database"`
+	JWT         JWTConfig         `mapstructure:"jwt"`
+	Logger      LoggerConfig      `mapstructure:"logger"`
+	Environment string            `mapstructure:"environment"`
 }
 
 type ServerConfig struct {
@@ -82,8 +83,20 @@ func LoadConfig(path ...string) (*Config, error) {
 	viper.SetDefault("logger.level", "debug")
 	viper.SetDefault("logger.encoding", "json")
 
+	// Load .env file
+	_ = godotenv.Load()
+
 	// Read environment variables
 	viper.AutomaticEnv()
+	viper.BindEnv("database.mongodb.uri", "MONGODB_URI")
+	viper.BindEnv("database.mongodb.database", "MONGODB_DATABASE")
+	viper.BindEnv("database.mongodb.timeout", "MONGODB_TIMEOUT")
+	viper.BindEnv("server.port", "SERVER_PORT")
+	viper.BindEnv("server.mode", "SERVER_MODE")
+	viper.BindEnv("jwt.secret", "JWT_SECRET")
+	viper.BindEnv("jwt.expiration", "JWT_EXPIRATION")
+	viper.BindEnv("logger.level", "LOGGER_LEVEL")
+	viper.BindEnv("logger.encoding", "LOGGER_ENCODING")
 
 	if err := viper.ReadInConfig(); err != nil {
 		log.Printf("Warning: Could not read config file: %v. Using defaults.", err)

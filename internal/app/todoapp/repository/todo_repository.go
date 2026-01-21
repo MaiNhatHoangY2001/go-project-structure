@@ -25,7 +25,7 @@ func NewTodoRepository(db *mongo.Database) domain.TodoRepository {
 func (r *todoRepository) Create(ctx context.Context, todo *entity.Todo) error {
 	todo.CreatedAt = time.Now()
 	todo.UpdatedAt = time.Now()
-	
+
 	model := TodoModelFromEntity(todo)
 	result, err := r.collection.InsertOne(ctx, model)
 	if err != nil {

@@ -24,7 +24,7 @@ func NewUserRepository(db *mongo.Database) domain.UserRepository {
 func (r *userRepository) Create(ctx context.Context, user *entity.User) error {
 	user.CreatedAt = time.Now()
 	user.UpdatedAt = time.Now()
-	
+
 	model := UserModelFromEntity(user)
 	result, err := r.collection.InsertOne(ctx, model)
 	if err != nil {
