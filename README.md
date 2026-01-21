@@ -1,51 +1,79 @@
-# Todo App with MongoDB, JWT Authentication, and Gin Framework
+# Todo App with Microservices Architecture
 
-A RESTful Todo application built with Go, featuring JWT authentication, MongoDB storage, Swagger documentation, and comprehensive testing.
+A microservices-based Todo application built with Go, featuring JWT authentication, MongoDB storage, gRPC inter-service communication, and comprehensive testing.
+
+## 🏗️ Architecture
+
+This application follows a **microservices architecture** with two independent services:
+
+### Services
+
+1. **Auth Service** (Port: 50051)
+   - User authentication and JWT token management
+   - gRPC server for internal communication
+   - Handles Signup, Login, and Token Validation
+
+2. **Todo Service** (Ports: 50052 gRPC, 8080 HTTP)
+   - Todo CRUD operations
+   - Dual interface: gRPC server + HTTP REST API
+   - Validates tokens via Auth Service gRPC client
+   - Client-facing REST API endpoints
+
+### Communication Flow
+```
+Client (HTTP) → Todo Service (HTTP REST) → Auth Service (gRPC)
+                     ↓
+                  MongoDB (Shared Database)
+```
 
 ## Features
 
+- ✅ **Microservices Architecture**: Separate Auth and Todo services
+- ✅ **gRPC Communication**: Efficient inter-service communication
 - ✅ **JWT Authentication**: Secure user signup and login with JWT tokens
-- ✅ **MongoDB Integration**: Persistent data storage with MongoDB
-- ✅ **RESTful API**: Clean and organized API endpoints
+- ✅ **MongoDB Integration**: Shared persistent data storage
+- ✅ **RESTful API**: Clean HTTP REST API for clients
 - ✅ **Swagger Documentation**: Interactive API documentation
 - ✅ **Standardized Responses**: Consistent API response format with i18n error codes
 - ✅ **User-Todo Relationship**: One user can have multiple todos
 - ✅ **CRUD Operations**: Full create, read, update, delete functionality
 - ✅ **Pagination Support**: Efficient listing with pagination
-- ✅ **Unit Tests**: Comprehensive service layer testing
-- ✅ **Integration Tests**: End-to-end API testing
+- ✅ **Unit Tests**: Comprehensive service layer testing (14 tests, 100% pass)
+- ✅ **Clean Architecture**: Domain-driven design with proper layering
 - ✅ **Structured Logging**: Zap logger integration
 
 ## Project Structure
 
 ```
 .
-├── cmd/
-│   └── todoapp/
-│       └── main.go           # Application entry point
+├── services/
+│   ├── auth-service/          # Authentication microservice
+│   │   ├── main.go            # Auth service entry point
+│   │   └── grpc/              # gRPC server implementation
+│   └── todo-service/          # Todo microservice
+│       ├── main.go            # Todo service entry point
+│       ├── grpc/              # gRPC server + Auth client
+│       └── http/              # HTTP REST API handlers
+├── proto/
+│   ├── auth/                  # Auth service proto definitions
+│   └── todo/                  # Todo service proto definitions
 ├── internal/
 │   ├── app/todoapp/
-│   │   ├── handlers/         # HTTP request handlers
-│   │   ├── middleware/       # JWT authentication middleware
-│   │   ├── models/           # Data models and DTOs
-│   │   ├── repositories/     # Data access layer
-│   │   ├── routes/           # Route definitions
-│   │   └── services/         # Business logic layer
+│   │   ├── domain/            # Domain entities and interfaces
+│   │   ├── usecase/           # Business logic layer
+│   │   ├── repository/        # Data access layer
+│   │   └── delivery/          # HTTP handlers (legacy monolith)
 │   └── pkg/
-│       ├── config/           # Configuration management
-│       ├── database/         # MongoDB connection
-│       └── logger/           # Logging setup
-├── configs/
-│   └── app.yaml              # Application configuration
-├── test/
-│   └── integration/          # Integration tests
-└── api/
-    └── docs/                 # Swagger documentation
+│       ├── config/            # Configuration management
+│       ├── database/          # MongoDB connection
+│       └── logger/            # Logging setup
+└── configs/
+    └── app.yaml               # Application configuration
 ```
 
 ## API Endpoints
 
-### Authentication
+### Authentication (via Todo Service HTTP API)
 - `POST /api/v1/auth/signup` - User registration
 - `POST /api/v1/auth/login` - User login
 
@@ -122,8 +150,16 @@ Edit `configs/app.yaml`:
 
 ```yaml
 server:
-  port: 8080
-  mode: debug # debug, release
+  port: 8080       # HTTP REST API port (Todo Service)
+  mode: debug      # debug, release
+
+grpc:
+  auth_service:
+    port: 50051    # Auth Service gRPC port
+    host: localhost
+  todo_service:
+    port: 50052    # Todo Service gRPC port
+    host: localhost
 
 database:
   mongodb:
@@ -142,6 +178,8 @@ logger:
 
 ## Installation and Running
 
+### Running Microservices
+
 1. **Clone the repository**
 ```bash
 git clone <repository-url>
@@ -158,11 +196,29 @@ go mod download
 # Using Docker
 docker run -d -p 27017:27017 --name mongodb mongo:latest
 
-# Or using local MongoDB installation
-mongod
+# Or using Docker Compose
+docker-compose up -d mongodb
 ```
 
-4. **Run the application**
+4. **Start Auth Service** (Terminal 1)
+```bash
+cd services/auth-service
+go run main.go
+```
+Output: `Auth Service listening on :50051`
+
+5. **Start Todo Service** (Terminal 2)
+```bash
+cd services/todo-service
+go run main.go
+```
+Output: 
+- `Todo Service gRPC listening on :50052`
+- `Todo Service HTTP listening on :8080`
+
+### Running Legacy Monolithic Application
+
+Alternatively, you can still run the original monolithic version:
 ```bash
 go run cmd/todoapp/main.go
 ```
