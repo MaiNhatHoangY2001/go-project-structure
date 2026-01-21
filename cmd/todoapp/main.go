@@ -67,7 +67,11 @@ func main() {
 	if err != nil {
 		logger.Log.Fatal("Failed to connect to MongoDB", zap.Error(err))
 	}
-	defer mongoDB.Disconnect()
+	defer func() {
+		if err := mongoDB.Disconnect(); err != nil {
+			logger.Log.Error("Failed to disconnect MongoDB", zap.Error(err))
+		}
+	}()
 
 	logger.Log.Info("Connected to MongoDB")
 

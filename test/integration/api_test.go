@@ -147,7 +147,8 @@ func TestAuthSignupAndLogin_Integration(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	var signupResp models.APIResponse
-	json.Unmarshal(w.Body.Bytes(), &signupResp)
+	err := json.Unmarshal(w.Body.Bytes(), &signupResp)
+	assert.NoError(t, err)
 	assert.True(t, signupResp.Success)
 
 	// Test Login
@@ -165,7 +166,8 @@ func TestAuthSignupAndLogin_Integration(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var loginResp models.APIResponse
-	json.Unmarshal(w.Body.Bytes(), &loginResp)
+	err = json.Unmarshal(w.Body.Bytes(), &loginResp)
+	assert.NoError(t, err)
 	assert.True(t, loginResp.Success)
 
 	// Extract token
@@ -202,7 +204,8 @@ func TestTodoCRUD_Integration(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	var loginResp models.APIResponse
-	json.Unmarshal(w.Body.Bytes(), &loginResp)
+	err := json.Unmarshal(w.Body.Bytes(), &loginResp)
+	assert.NoError(t, err)
 	loginData := loginResp.Data.(map[string]interface{})
 	token := loginData["token"].(string)
 
@@ -222,7 +225,8 @@ func TestTodoCRUD_Integration(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	var createResp models.APIResponse
-	json.Unmarshal(w.Body.Bytes(), &createResp)
+	err = json.Unmarshal(w.Body.Bytes(), &createResp)
+	assert.NoError(t, err)
 	assert.True(t, createResp.Success)
 
 	// List Todos
@@ -234,7 +238,8 @@ func TestTodoCRUD_Integration(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var listResp models.APIResponse
-	json.Unmarshal(w.Body.Bytes(), &listResp)
+	err = json.Unmarshal(w.Body.Bytes(), &listResp)
+	assert.NoError(t, err)
 	assert.True(t, listResp.Success)
 }
 
@@ -256,7 +261,8 @@ func TestTodoUnauthorizedAccess_Integration(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 
 	var resp models.APIResponse
-	json.Unmarshal(w.Body.Bytes(), &resp)
+	err := json.Unmarshal(w.Body.Bytes(), &resp)
+	assert.NoError(t, err)
 	assert.False(t, resp.Success)
 	assert.NotNil(t, resp.Error)
 	assert.Equal(t, models.ErrCodeMissingAuthHeader, resp.Error.Code)
