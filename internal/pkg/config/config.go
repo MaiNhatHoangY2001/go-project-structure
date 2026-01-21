@@ -8,6 +8,7 @@ import (
 
 type Config struct {
 	Server   ServerConfig   `mapstructure:"server"`
+	GRPC     GRPCConfig     `mapstructure:"grpc"`
 	Database DatabaseConfig `mapstructure:"database"`
 	JWT      JWTConfig      `mapstructure:"jwt"`
 	Logger   LoggerConfig   `mapstructure:"logger"`
@@ -16,6 +17,16 @@ type Config struct {
 type ServerConfig struct {
 	Port string `mapstructure:"port"`
 	Mode string `mapstructure:"mode"`
+}
+
+type GRPCConfig struct {
+	AuthService GRPCServiceConfig `mapstructure:"auth_service"`
+	TodoService GRPCServiceConfig `mapstructure:"todo_service"`
+}
+
+type GRPCServiceConfig struct {
+	Port string `mapstructure:"port"`
+	Host string `mapstructure:"host"`
 }
 
 type DatabaseConfig struct {
@@ -45,6 +56,10 @@ func LoadConfig(path string) (*Config, error) {
 	// Set default values
 	viper.SetDefault("server.port", "8080")
 	viper.SetDefault("server.mode", "debug")
+	viper.SetDefault("grpc.auth_service.port", "50051")
+	viper.SetDefault("grpc.auth_service.host", "localhost")
+	viper.SetDefault("grpc.todo_service.port", "50052")
+	viper.SetDefault("grpc.todo_service.host", "localhost")
 	viper.SetDefault("database.mongodb.uri", "mongodb://localhost:27017")
 	viper.SetDefault("database.mongodb.database", "todoapp")
 	viper.SetDefault("database.mongodb.timeout", 10)

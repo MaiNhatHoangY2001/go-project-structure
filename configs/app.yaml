@@ -2,6 +2,14 @@ server:
   port: 8080
   mode: debug # debug, release
 
+grpc:
+  auth_service:
+    port: 50051
+    host: localhost
+  todo_service:
+    port: 50052
+    host: localhost
+
 database:
   mongodb:
     uri: mongodb://localhost:27017
