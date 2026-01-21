@@ -47,7 +47,7 @@ jobs:
       run: go mod download
 
     - name: Run unit tests
-      run: go test -mod=mod ./internal/app/todoapp/services/... -v -coverprofile=coverage.txt -covermode=atomic
+      run: go test -mod=mod ./internal/app/todoapp/usecase/... -v -coverprofile=coverage.txt -covermode=atomic
 
     - name: Run integration tests
       run: go test -mod=mod ./test/integration/... -v
