@@ -113,7 +113,7 @@ A RESTful Todo application built with Go, featuring JWT authentication, MongoDB 
 
 ## Prerequisites
 
-- Go 1.19 or higher
+- Go 1.24 or higher
 - MongoDB 4.0 or higher
 
 ## Configuration
