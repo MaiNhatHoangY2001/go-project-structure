@@ -1,0 +1,17 @@
+server:
+  port: 8080
+  mode: debug # debug, release
+
+database:
+  mongodb:
+    uri: mongodb://localhost:27017
+    database: todoapp
+    timeout: 10
+
+jwt:
+  secret: your-secret-key-change-in-production
+  expiration: 24 # hours
+
+logger:
+  level: debug # debug, info, warn, error
+  encoding: json # json, console
