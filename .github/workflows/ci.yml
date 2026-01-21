@@ -10,6 +10,8 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     
     services:
       mongodb:
@@ -61,6 +63,8 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     needs: test
+    permissions:
+      contents: read
 
     steps:
     - name: Checkout code
@@ -83,6 +87,8 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
     - name: Checkout code
