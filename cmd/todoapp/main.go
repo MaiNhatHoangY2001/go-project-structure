@@ -32,10 +32,10 @@ import (
 	"time"
 
 	_ "github.com/MaiNhatHoangY2001/go-project-structure/api/docs"
-	"github.com/MaiNhatHoangY2001/go-project-structure/internal/app/todoapp/handlers"
-	"github.com/MaiNhatHoangY2001/go-project-structure/internal/app/todoapp/repositories"
-	"github.com/MaiNhatHoangY2001/go-project-structure/internal/app/todoapp/routes"
-	"github.com/MaiNhatHoangY2001/go-project-structure/internal/app/todoapp/services"
+	"github.com/MaiNhatHoangY2001/go-project-structure/internal/app/todoapp/delivery/http/handler"
+	"github.com/MaiNhatHoangY2001/go-project-structure/internal/app/todoapp/delivery/http/router"
+	"github.com/MaiNhatHoangY2001/go-project-structure/internal/app/todoapp/repository"
+	"github.com/MaiNhatHoangY2001/go-project-structure/internal/app/todoapp/usecase"
 	"github.com/MaiNhatHoangY2001/go-project-structure/internal/pkg/config"
 	"github.com/MaiNhatHoangY2001/go-project-structure/internal/pkg/database"
 	"github.com/MaiNhatHoangY2001/go-project-structure/internal/pkg/logger"
@@ -76,25 +76,25 @@ func main() {
 	logger.Log.Info("Connected to MongoDB")
 
 	// Initialize repositories
-	userRepo := repositories.NewUserRepository(mongoDB.Database)
-	todoRepo := repositories.NewTodoRepository(mongoDB.Database)
+	userRepo := repository.NewUserRepository(mongoDB.Database)
+	todoRepo := repository.NewTodoRepository(mongoDB.Database)
 
-	// Initialize services
-	authService := services.NewAuthService(userRepo, cfg.JWT.Secret, cfg.JWT.Expiration)
-	todoService := services.NewTodoService(todoRepo)
+	// Initialize use cases
+	authUsecase := usecase.NewAuthUsecase(userRepo, cfg.JWT.Secret, cfg.JWT.Expiration)
+	todoUsecase := usecase.NewTodoUsecase(todoRepo)
 
 	// Initialize handlers
-	authHandler := handlers.NewAuthHandler(authService)
-	todoHandler := handlers.NewTodoHandler(todoService)
+	authHandler := handler.NewAuthHandler(authUsecase)
+	todoHandler := handler.NewTodoHandler(todoUsecase)
 
 	// Set Gin mode
 	gin.SetMode(cfg.Server.Mode)
 
 	// Setup router
-	router := gin.Default()
+	r := gin.Default()
 
 	// Setup routes
-	routes.SetupRoutes(router, authService, authHandler, todoHandler)
+	router.SetupRoutes(r, authUsecase, authHandler, todoHandler)
 
 	// Start server
 	srv := fmt.Sprintf(":%s", cfg.Server.Port)
@@ -105,7 +105,7 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		if err := router.Run(srv); err != nil {
+		if err := r.Run(srv); err != nil {
 			logger.Log.Fatal("Failed to start server", zap.Error(err))
 		}
 	}()
