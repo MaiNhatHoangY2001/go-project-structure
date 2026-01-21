@@ -99,7 +99,7 @@ func createLocalTodoClient(host, port string) (pb.TodoServiceClient, *grpc.Clien
 	var err error
 	
 	for i := 0; i < maxRetries; i++ {
-		conn, err = grpc.Dial(address, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		conn, err = grpc.NewClient(address, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err == nil {
 			return pb.NewTodoServiceClient(conn), conn, nil
 		}

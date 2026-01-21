@@ -3,7 +3,6 @@ package grpc
 import (
 	"context"
 	"fmt"
-	"time"
 
 	pb "github.com/MaiNhatHoangY2001/go-project-structure/proto/auth"
 	"google.golang.org/grpc"
@@ -17,16 +16,12 @@ type AuthClient struct {
 
 func NewAuthClient(host string, port string) (*AuthClient, error) {
 	address := fmt.Sprintf("%s:%s", host, port)
-	
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 
-	conn, err := grpc.DialContext(ctx, address, 
+	conn, err := grpc.NewClient(address, 
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithBlock(),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to auth service: %w", err)
+		return nil, fmt.Errorf("failed to create connection to auth service: %w", err)
 	}
 
 	return &AuthClient{
