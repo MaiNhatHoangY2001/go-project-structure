@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: todoapp-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: todoapp
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - todoapp-network
+
+  todoapp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: todoapp
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017
+      - JWT_SECRET=change-this-in-production
+    depends_on:
+      - mongodb
+    networks:
+      - todoapp-network
+
+volumes:
+  mongodb_data:
+
+networks:
+  todoapp-network:
+    driver: bridge
