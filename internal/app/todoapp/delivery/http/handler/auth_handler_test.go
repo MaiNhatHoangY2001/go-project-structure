@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/MaiNhatHoangY2001/go-project-structure/internal/app/todoapp/domain/dto"
+	"github.com/MaiNhatHoangY2001/go-project-structure/internal/app/todoapp/usecase"
 	"github.com/MaiNhatHoangY2001/go-project-structure/internal/pkg/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -17,10 +18,14 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// MockAuthUsecase is a mock implementation of AuthUsecase
+// MockAuthUsecase is a mock implementation of usecase.AuthUsecase interface
 type MockAuthUsecase struct {
 	mock.Mock
 }
+
+var _ usecase.AuthUsecase = (*MockAuthUsecase)(nil) // Ensure interface compliance at compile time
+
+const invalidJSON = `{"email": "test@example.com", "password": }` // Invalid JSON for testing
 
 func (m *MockAuthUsecase) Signup(ctx context.Context, req *dto.UserSignupRequest) (*dto.UserResponse, error) {
 	args := m.Called(ctx, req)
@@ -99,9 +104,7 @@ func TestSignup_InvalidJSON(t *testing.T) {
 	router := setupTestRouter()
 	router.POST("/signup", handler.Signup)
 
-	invalidJSON := []byte(`{"email": "test@example.com", "password": }`)
-
-	req, _ := http.NewRequest(http.MethodPost, "/signup", bytes.NewBuffer(invalidJSON))
+	req, _ := http.NewRequest(http.MethodPost, "/signup", bytes.NewBufferString(invalidJSON))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -262,9 +265,7 @@ func TestLogin_InvalidJSON(t *testing.T) {
 	router := setupTestRouter()
 	router.POST("/login", handler.Login)
 
-	invalidJSON := []byte(`{"email": "test@example.com", "password": }`)
-
-	req, _ := http.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(invalidJSON))
+	req, _ := http.NewRequest(http.MethodPost, "/login", bytes.NewBufferString(invalidJSON))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
