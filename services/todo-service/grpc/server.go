@@ -80,16 +80,10 @@ func (s *TodoServer) ListTodos(ctx context.Context, req *pb.ListTodosRequest) (*
 		return nil, err
 	}
 
-	var completed *bool
-	if req.Completed != nil {
-		c := *req.Completed
-		completed = &c
-	}
-
 	query := &dto.TodoListQuery{
 		Page:      int(req.Page),
 		PageSize:  int(req.PageSize),
-		Completed: completed,
+		Completed: req.Completed,
 	}
 
 	todos, total, err := s.todoUsecase.List(ctx, userID, query)
