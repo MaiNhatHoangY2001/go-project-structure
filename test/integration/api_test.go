@@ -8,10 +8,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/MaiNhatHoangY2001/go-project-structure/internal/app/todoapp/handlers"
-	"github.com/MaiNhatHoangY2001/go-project-structure/internal/app/todoapp/models"
-	"github.com/MaiNhatHoangY2001/go-project-structure/internal/app/todoapp/routes"
-	"github.com/MaiNhatHoangY2001/go-project-structure/internal/app/todoapp/services"
+	"github.com/MaiNhatHoangY2001/go-project-structure/internal/app/todoapp/delivery/http/handler"
+	"github.com/MaiNhatHoangY2001/go-project-structure/internal/app/todoapp/delivery/http/router"
+	"github.com/MaiNhatHoangY2001/go-project-structure/internal/app/todoapp/domain/dto"
+	"github.com/MaiNhatHoangY2001/go-project-structure/internal/app/todoapp/domain/entity"
+	"github.com/MaiNhatHoangY2001/go-project-structure/internal/app/todoapp/usecase"
 	"github.com/MaiNhatHoangY2001/go-project-structure/internal/pkg/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -21,22 +22,22 @@ import (
 
 // MockUserRepository for integration tests
 type MockUserRepo struct {
-	users map[string]*models.User
+	users map[string]*entity.User
 }
 
 func NewMockUserRepo() *MockUserRepo {
 	return &MockUserRepo{
-		users: make(map[string]*models.User),
+		users: make(map[string]*entity.User),
 	}
 }
 
-func (r *MockUserRepo) Create(ctx context.Context, user *models.User) error {
+func (r *MockUserRepo) Create(ctx context.Context, user *entity.User) error {
 	user.ID = primitive.NewObjectID()
 	r.users[user.Email] = user
 	return nil
 }
 
-func (r *MockUserRepo) FindByEmail(ctx context.Context, email string) (*models.User, error) {
+func (r *MockUserRepo) FindByEmail(ctx context.Context, email string) (*entity.User, error) {
 	user, exists := r.users[email]
 	if !exists {
 		return nil, nil
@@ -44,7 +45,7 @@ func (r *MockUserRepo) FindByEmail(ctx context.Context, email string) (*models.U
 	return user, nil
 }
 
-func (r *MockUserRepo) FindByID(ctx context.Context, id primitive.ObjectID) (*models.User, error) {
+func (r *MockUserRepo) FindByID(ctx context.Context, id primitive.ObjectID) (*entity.User, error) {
 	for _, user := range r.users {
 		if user.ID == id {
 			return user, nil
@@ -55,22 +56,22 @@ func (r *MockUserRepo) FindByID(ctx context.Context, id primitive.ObjectID) (*mo
 
 // MockTodoRepository for integration tests
 type MockTodoRepo struct {
-	todos map[string]*models.Todo
+	todos map[string]*entity.Todo
 }
 
 func NewMockTodoRepo() *MockTodoRepo {
 	return &MockTodoRepo{
-		todos: make(map[string]*models.Todo),
+		todos: make(map[string]*entity.Todo),
 	}
 }
 
-func (r *MockTodoRepo) Create(ctx context.Context, todo *models.Todo) error {
+func (r *MockTodoRepo) Create(ctx context.Context, todo *entity.Todo) error {
 	todo.ID = primitive.NewObjectID()
 	r.todos[todo.ID.Hex()] = todo
 	return nil
 }
 
-func (r *MockTodoRepo) FindByID(ctx context.Context, id primitive.ObjectID) (*models.Todo, error) {
+func (r *MockTodoRepo) FindByID(ctx context.Context, id primitive.ObjectID) (*entity.Todo, error) {
 	todo, exists := r.todos[id.Hex()]
 	if !exists {
 		return nil, nil
@@ -78,8 +79,8 @@ func (r *MockTodoRepo) FindByID(ctx context.Context, id primitive.ObjectID) (*mo
 	return todo, nil
 }
 
-func (r *MockTodoRepo) FindByUserID(ctx context.Context, userID primitive.ObjectID, page, pageSize int, completed *bool) ([]*models.Todo, int64, error) {
-	var result []*models.Todo
+func (r *MockTodoRepo) FindByUserID(ctx context.Context, userID primitive.ObjectID, page, pageSize int, completed *bool) ([]*entity.Todo, int64, error) {
+	var result []*entity.Todo
 	for _, todo := range r.todos {
 		if todo.UserID == userID {
 			if completed == nil || todo.Completed == *completed {
@@ -116,23 +117,23 @@ func setupRouter() *gin.Engine {
 	userRepo := NewMockUserRepo()
 	todoRepo := NewMockTodoRepo()
 
-	authService := services.NewAuthService(userRepo, "test-secret", 24)
-	todoService := services.NewTodoService(todoRepo)
+	authUsecase := usecase.NewAuthUsecase(userRepo, "test-secret", 24)
+	todoUsecase := usecase.NewTodoUsecase(todoRepo)
 
-	authHandler := handlers.NewAuthHandler(authService)
-	todoHandler := handlers.NewTodoHandler(todoService)
+	authHandler := handler.NewAuthHandler(authUsecase)
+	todoHandler := handler.NewTodoHandler(todoUsecase)
 
-	router := gin.Default()
-	routes.SetupRoutes(router, authService, authHandler, todoHandler)
+	ginRouter := gin.Default()
+	router.SetupRoutes(ginRouter, authUsecase, authHandler, todoHandler)
 
-	return router
+	return ginRouter
 }
 
 func TestAuthSignupAndLogin_Integration(t *testing.T) {
-	router := setupRouter()
+	ginRouter := setupRouter()
 
 	// Test Signup
-	signupReq := models.UserSignupRequest{
+	signupReq := dto.UserSignupRequest{
 		Email:    "test@example.com",
 		Password: "password123",
 		Name:     "Test User",
@@ -142,17 +143,17 @@ func TestAuthSignupAndLogin_Integration(t *testing.T) {
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("POST", "/api/v1/auth/signup", bytes.NewBuffer(signupBody))
 	req.Header.Set("Content-Type", "application/json")
-	router.ServeHTTP(w, req)
+	ginRouter.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusCreated, w.Code)
 
-	var signupResp models.APIResponse
+	var signupResp dto.APIResponse
 	err := json.Unmarshal(w.Body.Bytes(), &signupResp)
 	assert.NoError(t, err)
 	assert.True(t, signupResp.Success)
 
 	// Test Login
-	loginReq := models.UserLoginRequest{
+	loginReq := dto.UserLoginRequest{
 		Email:    "test@example.com",
 		Password: "password123",
 	}
@@ -161,11 +162,11 @@ func TestAuthSignupAndLogin_Integration(t *testing.T) {
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest("POST", "/api/v1/auth/login", bytes.NewBuffer(loginBody))
 	req.Header.Set("Content-Type", "application/json")
-	router.ServeHTTP(w, req)
+	ginRouter.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	var loginResp models.APIResponse
+	var loginResp dto.APIResponse
 	err = json.Unmarshal(w.Body.Bytes(), &loginResp)
 	assert.NoError(t, err)
 	assert.True(t, loginResp.Success)
@@ -176,10 +177,10 @@ func TestAuthSignupAndLogin_Integration(t *testing.T) {
 }
 
 func TestTodoCRUD_Integration(t *testing.T) {
-	router := setupRouter()
+	ginRouter := setupRouter()
 
 	// Signup first
-	signupReq := models.UserSignupRequest{
+	signupReq := dto.UserSignupRequest{
 		Email:    "test@example.com",
 		Password: "password123",
 		Name:     "Test User",
@@ -189,10 +190,10 @@ func TestTodoCRUD_Integration(t *testing.T) {
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("POST", "/api/v1/auth/signup", bytes.NewBuffer(signupBody))
 	req.Header.Set("Content-Type", "application/json")
-	router.ServeHTTP(w, req)
+	ginRouter.ServeHTTP(w, req)
 
 	// Login to get token
-	loginReq := models.UserLoginRequest{
+	loginReq := dto.UserLoginRequest{
 		Email:    "test@example.com",
 		Password: "password123",
 	}
@@ -201,16 +202,16 @@ func TestTodoCRUD_Integration(t *testing.T) {
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest("POST", "/api/v1/auth/login", bytes.NewBuffer(loginBody))
 	req.Header.Set("Content-Type", "application/json")
-	router.ServeHTTP(w, req)
+	ginRouter.ServeHTTP(w, req)
 
-	var loginResp models.APIResponse
+	var loginResp dto.APIResponse
 	err := json.Unmarshal(w.Body.Bytes(), &loginResp)
 	assert.NoError(t, err)
 	loginData := loginResp.Data.(map[string]interface{})
 	token := loginData["token"].(string)
 
 	// Create Todo
-	createReq := models.TodoCreateRequest{
+	createReq := dto.TodoCreateRequest{
 		Title:       "Test Todo",
 		Description: "Test Description",
 	}
@@ -220,11 +221,11 @@ func TestTodoCRUD_Integration(t *testing.T) {
 	req, _ = http.NewRequest("POST", "/api/v1/todos", bytes.NewBuffer(createBody))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+token)
-	router.ServeHTTP(w, req)
+	ginRouter.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusCreated, w.Code)
 
-	var createResp models.APIResponse
+	var createResp dto.APIResponse
 	err = json.Unmarshal(w.Body.Bytes(), &createResp)
 	assert.NoError(t, err)
 	assert.True(t, createResp.Success)
@@ -233,21 +234,21 @@ func TestTodoCRUD_Integration(t *testing.T) {
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest("GET", "/api/v1/todos?page=1&pageSize=10", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
-	router.ServeHTTP(w, req)
+	ginRouter.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	var listResp models.APIResponse
+	var listResp dto.APIResponse
 	err = json.Unmarshal(w.Body.Bytes(), &listResp)
 	assert.NoError(t, err)
 	assert.True(t, listResp.Success)
 }
 
 func TestTodoUnauthorizedAccess_Integration(t *testing.T) {
-	router := setupRouter()
+	ginRouter := setupRouter()
 
 	// Try to create todo without token
-	createReq := models.TodoCreateRequest{
+	createReq := dto.TodoCreateRequest{
 		Title:       "Test Todo",
 		Description: "Test Description",
 	}
@@ -256,14 +257,14 @@ func TestTodoUnauthorizedAccess_Integration(t *testing.T) {
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("POST", "/api/v1/todos", bytes.NewBuffer(createBody))
 	req.Header.Set("Content-Type", "application/json")
-	router.ServeHTTP(w, req)
+	ginRouter.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 
-	var resp models.APIResponse
+	var resp dto.APIResponse
 	err := json.Unmarshal(w.Body.Bytes(), &resp)
 	assert.NoError(t, err)
 	assert.False(t, resp.Success)
 	assert.NotNil(t, resp.Error)
-	assert.Equal(t, models.ErrCodeMissingAuthHeader, resp.Error.Code)
+	assert.Equal(t, dto.ErrCodeMissingAuthHeader, resp.Error.Code)
 }
