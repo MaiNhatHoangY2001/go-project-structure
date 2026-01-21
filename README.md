@@ -146,7 +146,34 @@ Client (HTTP) → Todo Service (HTTP REST) → Auth Service (gRPC)
 
 ## Configuration
 
-Edit `configs/app.yaml`:
+You can configure the application using either `.env` file or `configs/app.yaml`. Environment variables take precedence over YAML configuration.
+
+### Using `.env` file (Recommended)
+
+Create a `.env` file in the root directory:
+
+```env
+# Server Configuration
+SERVER_PORT=8080
+SERVER_MODE=debug
+
+# Database Configuration
+MONGODB_URI=mongodb://localhost:27017
+MONGODB_DATABASE=todoapp
+MONGODB_TIMEOUT=10
+
+# JWT Configuration
+JWT_SECRET=your-secret-key-change-in-production
+JWT_EXPIRATION=24
+
+# Logger Configuration
+LOGGER_LEVEL=debug
+LOGGER_ENCODING=json
+```
+
+### Using `configs/app.yaml`
+
+Or edit `configs/app.yaml`:
 
 ```yaml
 server:
@@ -191,7 +218,13 @@ cd go-project-structure
 go mod download
 ```
 
-3. **Start MongoDB** (if not already running)
+3. **Configure environment** 
+Create a `.env` file in the root directory (or use `configs/app.yaml`):
+```bash
+cp .env.example .env  # if available, or create manually
+```
+
+4. **Start MongoDB** (if not already running)
 ```bash
 # Using Docker
 docker run -d -p 27017:27017 --name mongodb mongo:latest
@@ -200,14 +233,14 @@ docker run -d -p 27017:27017 --name mongodb mongo:latest
 docker-compose up -d mongodb
 ```
 
-4. **Start Auth Service** (Terminal 1)
+5. **Start Auth Service** (Terminal 1)
 ```bash
 cd services/auth-service
 go run main.go
 ```
 Output: `Auth Service listening on :50051`
 
-5. **Start Todo Service** (Terminal 2)
+6. **Start Todo Service** (Terminal 2)
 ```bash
 cd services/todo-service
 go run main.go
